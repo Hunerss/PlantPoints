@@ -15,6 +15,10 @@ import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -49,6 +53,14 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     TextView debugText;
     SeekBar debugSeekbar;
 
+    Button addPlantButton, confirmPlantButton, cancelPlantButton;
+    LinearLayout addPlantWindow;
+    EditText nameEdit, descriptionEdit;
+    SeekBar rangeBar;
+    TextView rangeText;
+
+    boolean addingPlant;
+
     List<Polygon> circles = new ArrayList<>();
 
     @Override
@@ -65,6 +77,16 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         debugText = findViewById(R.id.debug_text);
         debugSeekbar = findViewById(R.id.debug_seekbar);
 
+        addPlantButton = findViewById(R.id.add_plant_button);
+        addPlantWindow = findViewById(R.id.add_plant_window);
+
+        confirmPlantButton = findViewById(R.id.confirm_plant_button);
+        cancelPlantButton = findViewById(R.id.cancel_plant_button);
+        nameEdit = findViewById(R.id.name_plant_box);
+        descriptionEdit = findViewById(R.id.description_plant_box);
+        rangeText = findViewById(R.id.range_text);
+        rangeBar = findViewById(R.id.range_bar);
+
         mapView = findViewById(R.id.main_map);
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.getMapCenter();
@@ -80,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         myLocation = new MyLocationNewOverlay(new GpsMyLocationProvider(this), mapView);
         controller = mapView.getController();
+        controller.zoomTo(17.0);
 
         myLocation.enableMyLocation();
         myLocation.enableFollowLocation();
@@ -134,70 +157,90 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
                 //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
 */
-                return super.onSingleTapUp(e, mapView);
+                //return super.onSingleTapUp(e, mapView);
+                return false;
             }
 
             @Override
             public boolean onTouchEvent(MotionEvent e, MapView mapView) {
-                for (int i = 0; i < circles.size(); i++) {
-                    mapView.getOverlays().remove(circles.get(i));
+                if (addingPlant) {
+                    String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
+                    //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
+
+                    DrawMiddleCircle();
+
+                    //debugText.setText(s + " " + /*lerp(1, 0.09, sin(abs(latit) / 85 * 1.62)) + " x " + */(double)round(globeSmooth(abs(latit) / 85) * 1000) / 1000);
+
+                    //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
+
                 }
-                circles.clear();
-
-                String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
-                //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
-
-
-
-                Polygon circle = new Polygon(mapView);
-                double radius = 1;
-                double longi = mapView.getMapCenter().getLongitude();
-                double latit = mapView.getMapCenter().getLatitude();
-                ArrayList<GeoPoint> circlePoints = new ArrayList<>();
-                for (float i = 0; i < 6.28; i+=0.1) {
-                    double x = latit + radius * sin(i) / 88 * lerp(1, 0.09, globeSmooth(abs(latit) / 85));
-                    double y = longi + radius * cos(i) / 88;
-
-                    //x *= getDistanceFromLatLonInKm(x, longi, latit, longi) / radius;
-                    //x *= getDistanceFromLatLonInKm(latit, y, latit, longi) / radius;
-                    /*double dis = getDistanceFromLatLonInKm(x, y, latit, longi);
-                    Log.d("info", dis + " and " + radius + " before");
-                    int b = 0;
-                    while(abs(dis - radius) > 0.01 && b < 1000)
-                    {
-                        //double xDir = sin(i) > 0 ? -1 : 1;
-                        double xDir = dis - radius > 0 ? -1 : 1;
-                        double yDir = dis - radius > 0 ? -1 : 1;
-                        x += xDir * 0.01;
-                        y += yDir * 0.01;
-                        //Log.d("info", getDistanceFromLatLonInKm(x, y, latit, longi) + " and " + radius);
-                        b++;
-                        dis = getDistanceFromLatLonInKm(x, y, latit, longi);
-                    }
-                    Log.d("info", getDistanceFromLatLonInKm(x, y, latit, longi) + " and " + radius + " after");*/
-
-                    //Log.d("x", (double)round(getDistanceFromLatLonInKm(x, 0, latit, 0) * 1000) / 1000 + " x " + radius);
-                    //Log.d("y",  round(i / 6.28 * 100) + ") " + (double)round(getDistanceFromLatLonInKm(0, y, 0, longi) * 1000) / 1000 + " x " + radius);
-                    //Log.d("x",  round(i / 6.28 * 100) + ") " + (double)round(getDistanceFromLatLonInKm(x, longi, latit, longi) * 1000) / 1000 + " x " + (double)round(getDistanceFromLatLonInKm(latit, y, latit, longi) * 1000) / 1000);
-
-                    circlePoints.add(new GeoPoint(x, y));
-                }
-                circle.setPoints(circlePoints);
-                circle.setFillColor(Color.argb(50, 27, 192, 63));
-                circle.setStrokeColor(Color.argb(50, 79, 219, 110));
-                circles.add(circle);
-                mapView.getOverlays().add(circle);
-
-                debugText.setText(getDistanceFromLatLonInKm(myLocation.getMyLocation().getLatitude(), myLocation.getMyLocation().getLongitude(), latit, longi) + " km");
-                //debugText.setText(s + " " + /*lerp(1, 0.09, sin(abs(latit) / 85 * 1.62)) + " x " + */(double)round(globeSmooth(abs(latit) / 85) * 1000) / 1000);
-
-                //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
 
                 return super.onTouchEvent(e, mapView);
             }
         });
 
 
+        addPlantButton.setOnClickListener(view -> {
+            addPlantWindow.setVisibility(View.VISIBLE);
+            addingPlant = true;
+            rangeBar.setProgress(5);
+            DrawMiddleCircle();
+        });
+
+        cancelPlantButton.setOnClickListener(view -> {
+            addPlantWindow.setVisibility(View.GONE);
+            addingPlant = false;
+            ClearCircles();
+        });
+
+        rangeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                rangeText.setText(i + " km");
+                DrawMiddleCircle();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+    }
+
+    private void DrawMiddleCircle() {
+        ClearCircles();
+
+        Polygon circle = new Polygon(mapView);
+        //double radius = 1;
+        double radius = rangeBar.getProgress();
+        double longi = mapView.getMapCenter().getLongitude();
+        double latit = mapView.getMapCenter().getLatitude();
+        ArrayList<GeoPoint> circlePoints = new ArrayList<>();
+        for (float i = 0; i < 6.28; i += 0.1) {
+            double x = latit + radius * sin(i) / 88 * lerp(1, 0.09, globeSmooth(abs(latit) / 85));
+            double y = longi + radius * cos(i) / 88;
+
+            circlePoints.add(new GeoPoint(x, y));
+        }
+        circle.setPoints(circlePoints);
+        circle.setFillColor(Color.argb(50, 27, 192, 63));
+        circle.setStrokeColor(Color.argb(50, 79, 219, 110));
+        circles.add(circle);
+        mapView.getOverlays().add(circle);
+
+        debugText.setText(getDistanceFromLatLonInKm(myLocation.getMyLocation().getLatitude(), myLocation.getMyLocation().getLongitude(), latit, longi) + " km");
+    }
+
+    private void ClearCircles() {
+        for (int i = 0; i < circles.size(); i++) {
+            mapView.getOverlays().remove(circles.get(i));
+        }
+        circles.clear();
     }
 
     @Override
