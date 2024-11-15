@@ -24,7 +24,10 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.config.IConfigurationProvider;
@@ -42,8 +45,12 @@ import org.osmdroid.views.overlay.Polygon;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity implements MapListener {
 
@@ -148,7 +155,82 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         });
 
         confirmPlantButton.setOnClickListener(v -> {
-            // TODO: HANDLE ADDING PLANT
+//            final String name = nameInput.getText().toString();
+//            final String description = descriptionInput.getText().toString();
+//            final int range;
+//            final double xValue, yValue;
+//            try {
+//                range = Integer.parseInt(rangeInput.getText().toString());
+//                xValue = Double.parseDouble(xValueInput.getText().toString());
+//                yValue = Double.parseDouble(yValueInput.getText().toString());
+//            } catch (NumberFormatException e) {
+//                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Invalid input", Toast.LENGTH_SHORT).show());
+//                return;
+//            }
+//
+//            if (name.isEmpty() || description.isEmpty() || range <= 0) {
+//                runOnUiThread(() -> Toast.makeText(MainActivity.this, "All fields must be filled", Toast.LENGTH_SHORT).show());
+//                return;
+//            }
+
+            // Utworzenie JSON-a
+            JSONObject data = new JSONObject();
+            try {
+                data.put("name", "name");
+//                data.put("name", name);
+                data.put("description", "description");
+//                data.put("description", description);
+                data.put("range", 15);
+//                data.put("range", range);
+                data.put("x_value", 0.2134);
+//                data.put("x_value", xValue);
+                data.put("y_value", -0.4324);
+//                data.put("y_value", yValue);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Toast.makeText(MainActivity.this, "Error creating JSON data", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Wysłanie żądania POST w oddzielnym wątku
+            new Thread(() -> {
+                try {
+                    URL url = new URL("http://plantpoints.great-site.net/addPoint.php"); // URL do API
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; utf-8");
+                    conn.setRequestProperty("Accept", "application/json");
+                    conn.setConnectTimeout(10000); // 10 sekund timeout
+                    conn.setReadTimeout(10000);    // 10 sekund timeout
+                    conn.setDoOutput(true);
+
+                    // Wysłanie danych
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(data.toString().getBytes("UTF-8"));
+                    }
+
+                    // Sprawdzenie kodu odpowiedzi
+                    int responseCode = conn.getResponseCode();
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        // Odczytanie odpowiedzi
+                        Scanner scanner = new Scanner(conn.getInputStream());
+                        final StringBuilder response = new StringBuilder();
+                        while (scanner.hasNext()) {
+                            response.append(scanner.nextLine());
+                        }
+                        scanner.close();
+
+                        // Wyświetlenie odpowiedzi
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, response.toString(), Toast.LENGTH_LONG).show());
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Server error: " + responseCode, Toast.LENGTH_SHORT).show());
+                    }
+                    conn.disconnect();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error sending data", Toast.LENGTH_SHORT).show());
+                }
+            }).start();
         });
 
         cancelPlantButton.setOnClickListener(view -> {
