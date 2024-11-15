@@ -6,4 +6,10 @@
     </style>
 
     <style name="Theme.PlantPoints" parent="Base.Theme.PlantPoints" />
+
+    <style name="BaseTheme">
+        <item name="android:background">@color/lightBG</item>
+        <item name="android:textColor">@color/lightTX</item>
+        <item name="android:endColor">@color/lightBG</item>
+    </style>
 </resources>

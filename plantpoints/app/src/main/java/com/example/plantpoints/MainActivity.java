@@ -74,9 +74,6 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         setContentView(R.layout.activity_main);
 
-        debugText = findViewById(R.id.debug_text);
-        debugSeekbar = findViewById(R.id.debug_seekbar);
-
         addPlantButton = findViewById(R.id.add_plant_button);
         addPlantWindow = findViewById(R.id.add_plant_window);
 
