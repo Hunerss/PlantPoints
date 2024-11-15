@@ -8,6 +8,14 @@ public class Point {
     private double x_value;
     private double y_value;
 
+    public Point(String name, String description, int range, double x_value, double y_value) {
+        this.name = name;
+        this.description = description;
+        this.range = range;
+        this.x_value = x_value;
+        this.y_value = y_value;
+    }
+
     public int getId() {
         return id;
     }
