@@ -1,4 +1,4 @@
-package com.example.plantpoints;
+package com.example.plantpoints.models;
 
 public class Point {
     private int id;
