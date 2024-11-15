@@ -13,5 +13,5 @@ public interface ApiService {
     Call<Void> addPoint(@Body Point point);
 
     @GET("getPoints.php")
-    Call<List<Point>> getPoints();
+    Call<String> getPoints();//Call<List<Point>> getPoints();
 }

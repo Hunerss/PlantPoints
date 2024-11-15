@@ -21,6 +21,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -28,6 +29,8 @@ import android.widget.Toast;
 
 import com.example.plantpoints.api.ApiService;
 import com.example.plantpoints.models.Point;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -60,6 +63,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class MainActivity extends AppCompatActivity implements MapListener {
 
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     EditText nameEdit, descriptionEdit;
     SeekBar rangeBar;
     TextView rangeText;
+    ImageView locationButton;
 
     boolean addingPlant;
 
@@ -98,9 +103,12 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         setContentView(R.layout.activity_main);
 
+        Gson gson = new GsonBuilder().setLenient().create();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("http://plantpoints.great-site.net/") // Adres bazowy API
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(ScalarsConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
 
         apiService = retrofit.create(ApiService.class);
@@ -108,8 +116,8 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         fetchPoints();
 
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_FINE_PERMISSION_CODE);
-        checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_LOCATION_PERMISSION_CODE);
-        checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION, LOCATION_COARSE_PERMISSION_CODE);
+        //checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_LOCATION_PERMISSION_CODE);
+//        checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION, LOCATION_COARSE_PERMISSION_CODE);
         checkPermission(Manifest.permission.INTERNET, INTERNET_PERMISSION_CODE);
 
         addPlantButton = findViewById(R.id.add_plant_button);
@@ -117,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         confirmPlantButton = findViewById(R.id.confirm_plant_button);
         cancelPlantButton = findViewById(R.id.cancel_plant_button);
+        locationButton = findViewById(R.id.locate_button);
         nameEdit = findViewById(R.id.name_plant_box);
         descriptionEdit = findViewById(R.id.description_plant_box);
         rangeText = findViewById(R.id.range_text);
@@ -176,14 +185,16 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         confirmPlantButton.setOnClickListener(v -> {
             // Pobieranie danych z pól tekstowych
-//            final String name = nameInput.getText().toString();
-            final String name = "name";
-//            final String description = descriptionInput.getText().toString();
-            final String description = "description";
-            final int range;
-            final double xValue, yValue;
+            final String name = nameEdit.getText().toString();
+//            final String name = "name";
+            final String description = descriptionEdit.getText().toString();
+//            final String description = "description";
+            final int range = rangeBar.getProgress();
+            final double xValue = mapView.getMapCenter().getLatitude(), yValue = mapView.getMapCenter().getLongitude();
 
-            try {
+            Log.d("add point",  name + " " + description + " " + range + "\n" + xValue + " x " + yValue);
+
+            /*try {
 //                range = Integer.parseInt(rangeInput.getText().toString());
                 range = 15;
 //                xValue = Double.parseDouble(xValueInput.getText().toString());
@@ -193,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             } catch (NumberFormatException e) {
                 Toast.makeText(MainActivity.this, "Invalid input", Toast.LENGTH_SHORT).show();
                 return;
-            }
+            }*/
 
             if (name.isEmpty() || description.isEmpty() || range <= 0) {
                 Toast.makeText(MainActivity.this, "All fields must be filled", Toast.LENGTH_SHORT).show();
@@ -216,7 +227,8 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
                 @Override
                 public void onFailure(Call<Void> call, Throwable t) {
-                    Toast.makeText(MainActivity.this, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(MainActivity.this, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e("Retrofit error", "Error: " + t.getMessage());
                 }
             });
         });
@@ -246,6 +258,11 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
             }
         });
+
+        locationButton.setOnClickListener(view -> {
+            GoToMyLocation();
+            controller.zoomTo(17.0);
+        });
     }
 
     private void GoToMyLocation() {
@@ -259,6 +276,8 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     }
 
     private void DrawMiddleCircle() {
+        if (middleCircle == null) return;
+
         double radius = rangeBar.getProgress();
         double longi = mapView.getMapCenter().getLongitude();
         double latit = mapView.getMapCenter().getLatitude();
@@ -363,23 +382,60 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     }
 
     private void fetchPoints() {
-        Call<List<Point>> call = apiService.getPoints();
-        call.enqueue(new Callback<List<Point>>() {
+        //Call<List<Point>> call = apiService.getPoints();
+        Call<String> call = apiService.getPoints();
+
+        call.enqueue(new Callback<String>() {
             @Override
-            public void onResponse(Call<List<Point>> call, Response<List<Point>> response) {
+            public void onResponse(Call<String> call, Response<String> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    pointsList.clear();
-                    pointsList.addAll(response.body()); // Dodanie punktów do ArrayList
-                    Toast.makeText(MainActivity.this, "Pobrano punkty: " + pointsList.size(), Toast.LENGTH_SHORT).show();
+                    //pointsList.clear();
+                    //pointsList.addAll(response.body()); // Dodanie punktów do ArrayList
+                    Log.d("response", response.body());
+                    //Toast.makeText(MainActivity.this, "Pobrano punkty: " + pointsList.size(), Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(MainActivity.this, "Nie znaleziono punktów", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<List<Point>> call, Throwable t) {
-                Toast.makeText(MainActivity.this, "Błąd: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            public void onFailure(Call<String> call, Throwable t) {
+//                Toast.makeText(MainActivity.this, "Błąd: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("Retrofit", "Błąd: " + t.getMessage());
+                //throw new RuntimeException("Błąd: " + t.getMessage());
             }
         });
+
+
+//        call.enqueue(new Callback<List<Point>>() {
+//            @Override
+//            public void onResponse(Call<List<Point>> call, Response<List<Point>> response) {
+//                if (response.isSuccessful() && response.body() != null) {
+//                    pointsList.clear();
+//                    pointsList.addAll(response.body()); // Dodanie punktów do ArrayList
+//                    Toast.makeText(MainActivity.this, "Pobrano punkty: " + pointsList.size(), Toast.LENGTH_SHORT).show();
+//                } else {
+//                    Toast.makeText(MainActivity.this, "Nie znaleziono punktów", Toast.LENGTH_SHORT).show();
+//                }
+//            }
+//
+//            @Override
+//            public void onFailure(Call<List<Point>> call, Throwable t) {
+////                Toast.makeText(MainActivity.this, "Błąd: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+//                Log.e("Retrofit", "Błąd: " + t.getMessage());
+//                //throw new RuntimeException("Błąd: " + t.getMessage());
+//            }
+//        });
+    }
+
+    void DrawCircles(){
+        for (int i = 0; i < circles.size(); i++) {
+            mapView.getOverlays().remove(circles.get(i));
+        }
+        circles.clear();
+
+        for (int i = 0; i < pointsList.size(); i++) {
+
+        }
     }
 }
