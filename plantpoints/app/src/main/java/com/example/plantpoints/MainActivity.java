@@ -7,8 +7,13 @@ import static java.lang.Math.cos;
 import static java.lang.Math.round;
 import static java.lang.Math.sin;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -21,6 +26,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
@@ -63,6 +69,13 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
     List<Polygon> circles = new ArrayList<>();
 
+    Polygon middleCircle;
+
+    private static final int LOCATION_FINE_PERMISSION_CODE = 100;
+    private static final int LOCATION_COARSE_PERMISSION_CODE = 101;
+    private static final int BACKGROUND_LOCATION_PERMISSION_CODE = 102;
+    private static final int INTERNET_PERMISSION_CODE = 103;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +86,16 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         provider.setOsmdroidTileCache(getStorage());
 
         setContentView(R.layout.activity_main);
+
+
+        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_FINE_PERMISSION_CODE);
+        checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_LOCATION_PERMISSION_CODE);
+        checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION, LOCATION_COARSE_PERMISSION_CODE);
+        checkPermission(Manifest.permission.INTERNET, INTERNET_PERMISSION_CODE);
+        //checkPermission("ACCESS_FINE_LOCATION", 1);
+        //checkPermission("ACCESS_COARSE_LOCATION", 2);
+        //checkPermission("ACCESS_BACKGROUND_LOCATION", 3);
+        //checkPermission("INTERNET", 4);
 
         debugText = findViewById(R.id.debug_text);
         debugSeekbar = findViewById(R.id.debug_seekbar);
@@ -104,13 +127,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         controller = mapView.getController();
         controller.zoomTo(17.0);
 
-        myLocation.enableMyLocation();
-        myLocation.enableFollowLocation();
-        myLocation.setDrawAccuracyEnabled(true);
-        myLocation.runOnFirstFix(() -> runOnUiThread(() ->{
-            controller.setCenter(myLocation.getMyLocation());
-            controller.animateTo(myLocation.getMyLocation());
-        }));
+        GoToMyLocation();
 
         controller.setZoom(6.0);
         mapView.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.NEVER);
@@ -122,6 +139,18 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             @Override
             public void draw(Canvas pCanvas, MapView pMapView, boolean pShadow) {
                 super.draw(pCanvas, pMapView, pShadow);
+
+                if (addingPlant) {
+                    String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
+                    //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
+
+                    DrawMiddleCircle();
+
+                    //debugText.setText(s + " " + /*lerp(1, 0.09, sin(abs(latit) / 85 * 1.62)) + " x " + */(double)round(globeSmooth(abs(latit) / 85) * 1000) / 1000);
+
+                    //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
+
+                }
             }
 
             @Override
@@ -158,39 +187,35 @@ public class MainActivity extends AppCompatActivity implements MapListener {
                 //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
 */
                 //return super.onSingleTapUp(e, mapView);
-                return false;
+                return true;
             }
 
-            @Override
-            public boolean onTouchEvent(MotionEvent e, MapView mapView) {
-                if (addingPlant) {
-                    String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
-                    //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
 
-                    DrawMiddleCircle();
-
-                    //debugText.setText(s + " " + /*lerp(1, 0.09, sin(abs(latit) / 85 * 1.62)) + " x " + */(double)round(globeSmooth(abs(latit) / 85) * 1000) / 1000);
-
-                    //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
-
-                }
-
-                return super.onTouchEvent(e, mapView);
-            }
         });
 
 
         addPlantButton.setOnClickListener(view -> {
             addPlantWindow.setVisibility(View.VISIBLE);
             addingPlant = true;
+            nameEdit.setText("");
+            descriptionEdit.setText("");
             rangeBar.setProgress(5);
+            middleCircle = new Polygon(mapView);
+            mapView.getOverlays().add(middleCircle);
             DrawMiddleCircle();
+            RefreshMap();
+        });
+
+        confirmPlantButton.setOnClickListener(v -> {
+
         });
 
         cancelPlantButton.setOnClickListener(view -> {
             addPlantWindow.setVisibility(View.GONE);
             addingPlant = false;
-            ClearCircles();
+            mapView.getOverlays().remove(middleCircle);
+            //ClearCircles();
+            RefreshMap();
         });
 
         rangeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -198,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 rangeText.setText(i + " km");
                 DrawMiddleCircle();
+                RefreshMap();
             }
 
             @Override
@@ -212,10 +238,20 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         });
     }
 
-    private void DrawMiddleCircle() {
-        ClearCircles();
+    private void GoToMyLocation() {
+        myLocation.enableMyLocation();
+        myLocation.enableFollowLocation();
+        myLocation.setDrawAccuracyEnabled(true);
+        myLocation.runOnFirstFix(() -> runOnUiThread(() ->{
+            controller.setCenter(myLocation.getMyLocation());
+            controller.animateTo(myLocation.getMyLocation());
+        }));
+    }
 
-        Polygon circle = new Polygon(mapView);
+    private void DrawMiddleCircle() {
+        //ClearCircles();
+
+        //Polygon circle = new Polygon(mapView);
         //double radius = 1;
         double radius = rangeBar.getProgress();
         double longi = mapView.getMapCenter().getLongitude();
@@ -227,13 +263,14 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
             circlePoints.add(new GeoPoint(x, y));
         }
-        circle.setPoints(circlePoints);
-        circle.setFillColor(Color.argb(50, 27, 192, 63));
-        circle.setStrokeColor(Color.argb(50, 79, 219, 110));
-        circles.add(circle);
-        mapView.getOverlays().add(circle);
+        middleCircle.setPoints(circlePoints);
+        middleCircle.setFillColor(Color.argb(50, 27, 192, 63));
+        middleCircle.setStrokeColor(Color.argb(50, 79, 219, 110));
 
-        debugText.setText(getDistanceFromLatLonInKm(myLocation.getMyLocation().getLatitude(), myLocation.getMyLocation().getLongitude(), latit, longi) + " km");
+        //circles.add(circle);
+        //mapView.getOverlays().add(circle);
+
+        //debugText.setText(getDistanceFromLatLonInKm(myLocation.getMyLocation().getLatitude(), myLocation.getMyLocation().getLongitude(), latit, longi) + " km");
     }
 
     private void ClearCircles() {
@@ -242,6 +279,27 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         }
         circles.clear();
     }
+
+    void RefreshMap(){
+        GeoPoint center = (GeoPoint)mapView.getMapCenter();
+        mapView.getController().setCenter(center);
+    }
+
+    public void checkPermission(String permission, int requestCode)
+    {
+        if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED) {
+
+            // Requesting the permission
+            ActivityCompat.requestPermissions(MainActivity.this, new String[] { permission }, requestCode);
+
+
+        }
+        else {
+//            Toast.makeText(MainActivity.this, "Permission already granted", Toast.LENGTH_SHORT).show();
+
+        }
+    }
+
 
     @Override
     public boolean onScroll(ScrollEvent event) {
@@ -277,5 +335,54 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
     double globeSmooth(double x) {
         return 1 - Math.cos((x * Math.PI) / 2);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults)
+    {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == LOCATION_FINE_PERMISSION_CODE) {
+
+            // Checking whether user granted the permission or not.
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                // Showing the toast message
+                Log.d("permission", "Location Fine Permission Granted");
+                GoToMyLocation();
+            }
+            else {
+                Log.d("permission", "Location Fine Permission Denied");
+            }
+        }
+        else if (requestCode == BACKGROUND_LOCATION_PERMISSION_CODE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("permission", "Background Location Permission Granted");
+            }
+            else {
+                Log.d("permission", "Background Location Permission Denied");
+            }
+        }
+        else if (requestCode == INTERNET_PERMISSION_CODE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("permission", "Internet Permission Granted");
+            }
+            else {
+                Log.d("permission", "Internet Permission Denied");
+            }
+        }
+        else if (requestCode == LOCATION_COARSE_PERMISSION_CODE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("permission", "Coarse Location Permission Granted");
+            }
+            else {
+                Log.d("permission", "Coarse Location Permission Denied");
+            }
+        }
     }
 }
