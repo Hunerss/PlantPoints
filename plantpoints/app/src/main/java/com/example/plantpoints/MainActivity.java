@@ -4,7 +4,6 @@ import static org.osmdroid.tileprovider.util.StorageUtils.getStorage;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.cos;
-import static java.lang.Math.round;
 import static java.lang.Math.sin;
 
 import androidx.annotation.NonNull;
@@ -19,19 +18,16 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.config.IConfigurationProvider;
-import org.osmdroid.events.MapEventsReceiver;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
@@ -54,10 +50,6 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     MapView mapView;
     IMapController controller;
     MyLocationNewOverlay myLocation;
-    MapEventsReceiver receiver;
-
-    TextView debugText;
-    SeekBar debugSeekbar;
 
     Button addPlantButton, confirmPlantButton, cancelPlantButton;
     LinearLayout addPlantWindow;
@@ -92,13 +84,6 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_LOCATION_PERMISSION_CODE);
         checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION, LOCATION_COARSE_PERMISSION_CODE);
         checkPermission(Manifest.permission.INTERNET, INTERNET_PERMISSION_CODE);
-        //checkPermission("ACCESS_FINE_LOCATION", 1);
-        //checkPermission("ACCESS_COARSE_LOCATION", 2);
-        //checkPermission("ACCESS_BACKGROUND_LOCATION", 3);
-        //checkPermission("INTERNET", 4);
-
-        debugText = findViewById(R.id.debug_text);
-        debugSeekbar = findViewById(R.id.debug_seekbar);
 
         addPlantButton = findViewById(R.id.add_plant_button);
         addPlantWindow = findViewById(R.id.add_plant_window);
@@ -139,58 +124,9 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             @Override
             public void draw(Canvas pCanvas, MapView pMapView, boolean pShadow) {
                 super.draw(pCanvas, pMapView, pShadow);
-
-                if (addingPlant) {
-                    String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
-                    //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
-
+                if (addingPlant)
                     DrawMiddleCircle();
-
-                    //debugText.setText(s + " " + /*lerp(1, 0.09, sin(abs(latit) / 85 * 1.62)) + " x " + */(double)round(globeSmooth(abs(latit) / 85) * 1000) / 1000);
-
-                    //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
-
-                }
             }
-
-            @Override
-            public boolean onSingleTapUp(MotionEvent e, MapView mapView) {
-
-                /*for (int i = 0; i < circles.size(); i++) {
-                    mapView.getOverlays().remove(circles.get(i));
-                }
-                circles.clear();
-
-                controller.animateTo(mapView.getMapCenter());
-                String s = mapView.getMapCenter().getLongitude() + " x " + mapView.getMapCenter().getLatitude();
-                //Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
-
-
-
-                Polygon circle = new Polygon(mapView);
-                double radius = 2;
-                double longi = mapView.getMapCenter().getLongitude();
-                double latit = mapView.getMapCenter().getLatitude();
-                ArrayList<GeoPoint> circlePoints = new ArrayList<>();
-                for (float i = 0; i < 6.28; i+=0.1) {
-                    double x = latit + radius * sin(i);
-                    double y = longi + radius*cos(i);
-                    circlePoints.add(new GeoPoint(x, y));
-                }
-                circle.setPoints(circlePoints);
-                circle.setFillColor(Color.argb(50, 27, 192, 63));
-                circle.setStrokeColor(Color.argb(50, 79, 219, 110));
-                circles.add(circle);
-                mapView.getOverlays().add(circle);
-
-
-                //Toast.makeText(getApplicationContext(), e.getX() + " x " + e.getY(), Toast.LENGTH_SHORT).show();
-*/
-                //return super.onSingleTapUp(e, mapView);
-                return true;
-            }
-
-
         });
 
 
@@ -201,20 +137,24 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             descriptionEdit.setText("");
             rangeBar.setProgress(5);
             middleCircle = new Polygon(mapView);
+            middleCircle.setOnClickListener((polygon, mapView, eventPos) -> {
+                middleCircle.closeInfoWindow();
+                return false;
+            });
+
             mapView.getOverlays().add(middleCircle);
             DrawMiddleCircle();
             RefreshMap();
         });
 
         confirmPlantButton.setOnClickListener(v -> {
-
+            // TODO: HANDLE ADDING PLANT
         });
 
         cancelPlantButton.setOnClickListener(view -> {
             addPlantWindow.setVisibility(View.GONE);
             addingPlant = false;
             mapView.getOverlays().remove(middleCircle);
-            //ClearCircles();
             RefreshMap();
         });
 
@@ -249,10 +189,6 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     }
 
     private void DrawMiddleCircle() {
-        //ClearCircles();
-
-        //Polygon circle = new Polygon(mapView);
-        //double radius = 1;
         double radius = rangeBar.getProgress();
         double longi = mapView.getMapCenter().getLongitude();
         double latit = mapView.getMapCenter().getLatitude();
@@ -266,18 +202,6 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         middleCircle.setPoints(circlePoints);
         middleCircle.setFillColor(Color.argb(50, 27, 192, 63));
         middleCircle.setStrokeColor(Color.argb(50, 79, 219, 110));
-
-        //circles.add(circle);
-        //mapView.getOverlays().add(circle);
-
-        //debugText.setText(getDistanceFromLatLonInKm(myLocation.getMyLocation().getLatitude(), myLocation.getMyLocation().getLongitude(), latit, longi) + " km");
-    }
-
-    private void ClearCircles() {
-        for (int i = 0; i < circles.size(); i++) {
-            mapView.getOverlays().remove(circles.get(i));
-        }
-        circles.clear();
     }
 
     void RefreshMap(){
@@ -287,17 +211,10 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
     public void checkPermission(String permission, int requestCode)
     {
-        if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED) {
-
-            // Requesting the permission
+        if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED)
             ActivityCompat.requestPermissions(MainActivity.this, new String[] { permission }, requestCode);
-
-
-        }
-        else {
-//            Toast.makeText(MainActivity.this, "Permission already granted", Toast.LENGTH_SHORT).show();
-
-        }
+        else
+            Log.d("permission", "Permission already granted");
     }
 
 
@@ -338,9 +255,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults)
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
     {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
@@ -358,31 +273,22 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             }
         }
         else if (requestCode == BACKGROUND_LOCATION_PERMISSION_CODE) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 Log.d("permission", "Background Location Permission Granted");
-            }
-            else {
+            else
                 Log.d("permission", "Background Location Permission Denied");
-            }
         }
         else if (requestCode == INTERNET_PERMISSION_CODE) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 Log.d("permission", "Internet Permission Granted");
-            }
-            else {
+            else
                 Log.d("permission", "Internet Permission Denied");
-            }
         }
         else if (requestCode == LOCATION_COARSE_PERMISSION_CODE) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 Log.d("permission", "Coarse Location Permission Granted");
-            }
-            else {
+            else
                 Log.d("permission", "Coarse Location Permission Denied");
-            }
         }
     }
 }
