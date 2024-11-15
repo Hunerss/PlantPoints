@@ -24,7 +24,13 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.plantpoints.api.ApiService;
+import com.example.plantpoints.models.Point;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.config.IConfigurationProvider;
@@ -42,8 +48,18 @@ import org.osmdroid.views.overlay.Polygon;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity implements MapListener {
 
@@ -68,6 +84,9 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     private static final int BACKGROUND_LOCATION_PERMISSION_CODE = 102;
     private static final int INTERNET_PERMISSION_CODE = 103;
 
+    private ArrayList<Point> pointsList;
+    private ApiService apiService;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,6 +97,15 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         provider.setOsmdroidTileCache(getStorage());
 
         setContentView(R.layout.activity_main);
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("http://plantpoints.great-site.net/") // Adres bazowy API
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        apiService = retrofit.create(ApiService.class);
+
+        fetchPoints();
 
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_FINE_PERMISSION_CODE);
         checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_LOCATION_PERMISSION_CODE);
@@ -147,7 +175,50 @@ public class MainActivity extends AppCompatActivity implements MapListener {
         });
 
         confirmPlantButton.setOnClickListener(v -> {
-            // TODO: HANDLE ADDING PLANT
+            // Pobieranie danych z pól tekstowych
+//            final String name = nameInput.getText().toString();
+            final String name = "name";
+//            final String description = descriptionInput.getText().toString();
+            final String description = "description";
+            final int range;
+            final double xValue, yValue;
+
+            try {
+//                range = Integer.parseInt(rangeInput.getText().toString());
+                range = 15;
+//                xValue = Double.parseDouble(xValueInput.getText().toString());
+                xValue = 0.1234;
+//                yValue = Double.parseDouble(yValueInput.getText().toString());
+                yValue = -0.4321;
+            } catch (NumberFormatException e) {
+                Toast.makeText(MainActivity.this, "Invalid input", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (name.isEmpty() || description.isEmpty() || range <= 0) {
+                Toast.makeText(MainActivity.this, "All fields must be filled", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Utworzenie obiektu Point
+            Point point = new Point(name, description, range, xValue, yValue);
+
+            // Wysłanie żądania Retrofit
+            apiService.addPoint(point).enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(MainActivity.this, "Point added successfully", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Failed to add point", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    Toast.makeText(MainActivity.this, "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         });
 
         cancelPlantButton.setOnClickListener(view -> {
@@ -289,5 +360,26 @@ public class MainActivity extends AppCompatActivity implements MapListener {
             else
                 Log.d("permission", "Coarse Location Permission Denied");
         }
+    }
+
+    private void fetchPoints() {
+        Call<List<Point>> call = apiService.getPoints();
+        call.enqueue(new Callback<List<Point>>() {
+            @Override
+            public void onResponse(Call<List<Point>> call, Response<List<Point>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    pointsList.clear();
+                    pointsList.addAll(response.body()); // Dodanie punktów do ArrayList
+                    Toast.makeText(MainActivity.this, "Pobrano punkty: " + pointsList.size(), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Nie znaleziono punktów", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Point>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Błąd: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
