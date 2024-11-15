@@ -15,46 +15,64 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/debug_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="300dp"
-        android:text="DEBUG"
-        app:layout_constraintBottom_toBottomOf="@+id/main_map"
-        app:layout_constraintEnd_toEndOf="parent"
+    <Button
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:text="X"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="10dp"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:visibility="gone"/>
+        android:backgroundTint="#76b852"/>
 
-    <SeekBar
-        android:id="@+id/debug_seekbar"
-        android:layout_width="200dp"
+    <Button
+        android:id="@+id/plant_list_button"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="60dp"
-        android:max="1000"
-        android:min="0"
-        android:progress="1000"
+        android:layout_marginBottom="64dp"
+        android:text="Plant list"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/add_plant_button"
         app:layout_constraintStart_toStartOf="parent"
-        android:visibility="gone"/>
+        android:backgroundTint="#76b852"/>
 
     <Button
         android:id="@+id/add_plant_button"
-        android:layout_width="200dp"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="64dp"
         android:text="Add plant"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@id/plant_list_button"
+        android:backgroundTint="#76b852"/>
+
+    <LinearLayout
+        android:id="@+id/plant_list_window"
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="32dp"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/gradient_background"
+        android:orientation="vertical"
+        android:padding="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ListView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/add_plant_window"
         android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="32dp"
-        android:background="@color/white"
+        android:background="@drawable/gradient_background"
         android:orientation="vertical"
         android:padding="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -65,7 +83,12 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Add plant" />
+            android:textSize="20dp"
+            android:textStyle="bold"
+            android:layout_marginLeft="5dp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginTop="5dp"
+            android:text="ADD PLANT"/>
 
         <EditText
             android:layout_width="match_parent"
@@ -78,33 +101,54 @@
             android:layout_height="wrap_content"
             android:hint="Description"
             android:id="@+id/description_plant_box"/>
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:orientation="horizontal">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="10dp">
+
             <SeekBar
-                android:layout_width="225dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:min="1"
                 android:max="50"
                 android:progress="5"
-                android:id="@+id/range_bar"/>
+                android:id="@+id/range_bar"
+                android:layout_weight="1"/>
+
             <TextView
-                android:layout_width="50dp"
-                android:layout_height="match_parent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="5 km"
-                android:id="@+id/range_text"
-                android:textAlignment="textEnd"/>
+                android:id="@+id/range_text"/>
+
         </LinearLayout>
-        <Button
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Add"
-            android:id="@+id/confirm_plant_button"/>
-        <Button
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cancel"
-            android:id="@+id/cancel_plant_button"/>
+            android:orientation="horizontal">
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Add"
+                android:id="@+id/confirm_plant_button"
+                android:layout_weight="1"
+                android:layout_margin="5dp"
+                android:backgroundTint="#76b852"/>
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:id="@+id/cancel_plant_button"
+                android:layout_weight="1"
+                android:layout_margin="5dp"
+                android:backgroundTint="#76b852"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
