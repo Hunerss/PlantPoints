@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements MapListener {
     private static final int BACKGROUND_LOCATION_PERMISSION_CODE = 102;
     private static final int INTERNET_PERMISSION_CODE = 103;
 
-    private ArrayList<Point> pointsList;
+    private ArrayList<Point> pointsList = new ArrayList<>();
     private ApiService apiService;
 
     @Override
@@ -393,6 +393,8 @@ public class MainActivity extends AppCompatActivity implements MapListener {
                     //pointsList.addAll(response.body()); // Dodanie punktów do ArrayList
                     Log.d("response", response.body());
                     //Toast.makeText(MainActivity.this, "Pobrano punkty: " + pointsList.size(), Toast.LENGTH_SHORT).show();
+
+                    drawCircles();
                 } else {
                     Toast.makeText(MainActivity.this, "Nie znaleziono punktów", Toast.LENGTH_SHORT).show();
                 }
@@ -428,7 +430,8 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 //        });
     }
 
-    void DrawCircles(){
+    void drawCircles(){
+
         for (int i = 0; i < circles.size(); i++) {
             mapView.getOverlays().remove(circles.get(i));
         }
@@ -436,6 +439,23 @@ public class MainActivity extends AppCompatActivity implements MapListener {
 
         for (int i = 0; i < pointsList.size(); i++) {
 
+            circles.add(new Polygon(mapView));
+
+            mapView.getOverlays().add(circles.get(i));
+
+            double radius = pointsList.get(i).getRange();
+            double longi = pointsList.get(i).getY_value();
+            double latit = pointsList.get(i).getX_value();
+            ArrayList<GeoPoint> circlePoints = new ArrayList<>();
+            for (float j = 0; j < 6.28; j += 0.1) {
+                double x = latit + radius * sin(j) / 88 * lerp(1, 0.09, globeSmooth(abs(latit) / 85));
+                double y = longi + radius * cos(j) / 88;
+
+                circlePoints.add(new GeoPoint(x, y));
+            }
+            middleCircle.setPoints(circlePoints);
+            middleCircle.setFillColor(Color.argb(50, 91, 235, 139));
+            middleCircle.setStrokeColor(Color.argb(50, 36, 158, 77));
         }
     }
 }
